@@ -1,0 +1,420 @@
+/**
+ * BBC Radio Explorer
+ * Copyright (c) 2026 Thomas Geppert
+ * BSD 3-Clause License
+ */
+
+/* ... existing properties ... */
+
+/* Mobile Responsiveness */
+@media screen and (max-width: 768px) {
+
+    /* Show search in header on mobile */
+    .search-container {
+        display: flex;
+        width: 100%;
+    }
+
+    .cache-progress {
+        font-size: 0.7rem;
+        padding: 0.2rem 0;
+    }
+
+    /* Allow the app to be scrollable if content overflows or use Vh correctly */
+    .app-container {
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .main-content {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* Sidebar - stacked layout */
+    .sidebar {
+        width: 100%;
+        height: auto;
+        min-height: unset;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        padding: 0.75rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .logo {
+        margin-bottom: 0;
+        padding: 0;
+        font-size: 1.1rem;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .logo .bbc {
+        padding: 0.1rem 0.3rem;
+    }
+
+    /* Move station nav under logo */
+    .station-nav {
+        overflow-x: auto;
+        display: flex;
+        padding-right: 0;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+    }
+
+    .station-nav h3 {
+        display: none;
+    }
+
+    #station-list {
+        display: flex;
+        flex-direction: row;
+        gap: 0.4rem;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .station-item {
+        padding: 0.4rem 0.75rem;
+        border-left: none;
+        border-bottom: none;
+        border-top: 3px solid transparent;
+        white-space: nowrap;
+        background: var(--card-bg);
+        border-radius: 6px;
+        font-size: 0.8rem;
+    }
+
+    .station-item.active {
+        background: rgba(255, 0, 80, 0.1);
+        border-top-color: var(--accent-color);
+    }
+
+    /* Smaller date picker */
+    .date-picker {
+        width: 100%;
+        justify-content: center;
+        padding: 0.4rem 0.6rem;
+        gap: 0.5rem;
+        border-radius: 8px;
+    }
+
+    .date-picker span {
+        min-width: unset;
+        font-size: 0.85rem;
+    }
+
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .today-btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+        border-radius: 6px;
+    }
+
+    /* Adjust Main Content */
+    .content-header {
+        padding: 0.4rem 0.75rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .header-top {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.3rem;
+        flex-wrap: nowrap;
+    }
+
+    .header-title-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .header-top h1 {
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .header-logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+    }
+
+    .play-btn {
+        font-size: 1rem;
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Compact day picker - right aligned */
+    .date-picker {
+        width: auto;
+        justify-content: flex-end;
+        padding: 0.25rem 0.4rem;
+        gap: 0.25rem;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+
+    .date-picker span {
+        min-width: unset;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .date-picker .icon-btn {
+        width: 22px;
+        height: 22px;
+        font-size: 0.75rem;
+    }
+
+    .date-picker .today-btn {
+        padding: 0.15rem 0.35rem;
+        font-size: 0.65rem;
+    }
+
+    .search-bar {
+        flex: 1;
+        min-width: 0;
+        margin-top: 0.25rem;
+    }
+
+    .search-bar input {
+        padding: 0.4rem 1.75rem 0.4rem 1.75rem;
+        font-size: 0.85rem;
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        width: 100%;
+    }
+
+    .search-icon {
+        left: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    #search-clear {
+        right: 6px;
+        width: 18px;
+        height: 18px;
+        font-size: 0.9rem;
+    }
+
+    .search-options {
+        display: none;
+    }
+
+    .view-toggle {
+        margin-left: 0.25rem;
+    }
+
+    .view-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Hide floating search elements */
+    .search-float {
+        display: none !important;
+    }
+
+    /* Mobile grid view - smaller cards */
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        padding: 0.5rem;
+    }
+
+    .programme-card {
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .programme-card:hover {
+        transform: none;
+        border-color: var(--accent-color);
+    }
+
+    .programme-card.now-playing {
+        border-color: var(--accent-color);
+        background: rgba(255, 0, 80, 0.05);
+    }
+
+    .programme-card.now-playing::after {
+        content: "NOW";
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: var(--accent-color);
+        border: 1px solid var(--accent-color);
+        padding: 0.1rem 0.3rem;
+        border-radius: 8px;
+    }
+
+    .prog-time {
+        font-size: 0.8rem;
+    }
+
+    .prog-title {
+        font-size: 0.95rem;
+        line-height: 1.2;
+    }
+
+    .prog-desc {
+        font-size: 0.75rem;
+    }
+
+    .prog-footer {
+        margin-top: auto;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .duration {
+        font-size: 0.7rem;
+    }
+
+    .schedule-section {
+        padding: 0;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .schedule-table-wrapper {
+        overflow: visible;
+        min-height: 0;
+        margin: 0;
+        padding: 0.75rem;
+    }
+
+    .schedule-table {
+        width: 100%;
+        min-width: unset;
+        table-layout: fixed;
+    }
+
+    .schedule-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(22, 24, 29, 0.98);
+        box-shadow: 0 1px 0 var(--glass-border);
+    }
+
+    .schedule-table thead th:first-child {
+        border-top-left-radius: 15px;
+    }
+
+    .schedule-table thead th:last-child {
+        border-top-right-radius: 15px;
+    }
+
+    /* Table Adjustments */
+    .schedule-table th,
+    .schedule-table td {
+        padding: 0.6rem 0.4rem;
+        font-size: 0.8rem;
+    }
+
+    /* Mobile table: hide Description and Duration columns (show Station, Date, Time, Title) */
+    .schedule-table .desc-col,
+    .schedule-table .duration-col,
+    .schedule-table th.desc-col,
+    .schedule-table th.duration-col {
+        display: none;
+    }
+
+    /* Mobile table: ensure Time and Title are visible */
+    .schedule-table .time-col,
+    .schedule-table .title-col,
+    .schedule-table th.time-col,
+    .schedule-table th.title-col {
+        display: table-cell;
+    }
+
+    /* Mobile table: Time column styles - fixed narrow width */
+    .schedule-table .time-col {
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    /* Mobile table: Title column styles - fills remaining space */
+    .schedule-table .title-col {
+        white-space: normal;
+        font-size: 0.85rem;
+        width: auto;
+        min-width: unset;
+        max-width: unset;
+    }
+
+    /* Clickable rows for details */
+    .schedule-table tbody tr {
+        cursor: pointer;
+    }
+
+    .schedule-table tbody tr td:first-child {
+        border-left: 1px solid var(--glass-border);
+    }
+
+    .schedule-table tbody tr td:last-child {
+        border-right: 1px solid var(--glass-border);
+    }
+
+    /* Sticky first column: transparent background for data cells only (not header) */
+    .schedule-table tbody td:first-child {
+        background: transparent;
+    }
+
+    /* Mobile programme card - selected highlight */
+    .programme-card.programme-goto {
+        border-color: #00ff88;
+        background: rgba(0, 255, 136, 0.1);
+    }
+
+    .programme-card.programme-goto::after {
+        content: "SELECTED";
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: #00ff88;
+        border: 1px solid #00ff88;
+        padding: 0.1rem 0.3rem;
+        border-radius: 8px;
+    }
+
+    .schedule-table tr.programme-goto td:first-child {
+        border-left: 3px solid #00ff88;
+    }
+}

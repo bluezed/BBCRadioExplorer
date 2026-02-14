@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<!--
+  BBC Radio Explorer
+  Copyright (c) 2026 Thomas Geppert
+  BSD 3-Clause License
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBC Radio Explorer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff0080'/><path d='M12 10 L12 22 M16 8 L16 24 M20 11 L20 21 M24 13 L24 19' stroke='white' stroke-width='2' stroke-linecap='round'/></svg>">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mobile.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.15"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="bbc">BBC</span> Radio <span class="explorer">Explorer</span>
+            </div>
+            <nav class="station-nav">
+                <h3>Stations</h3>
+                <ul id="station-list">
+                    <!-- Stations will be populated by JS -->
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-top">
+                    <div class="header-title-group">
+                        <div id="station-logo-header" class="header-logo"></div>
+                        <h1 id="current-station-name">BBC Radio 1</h1>
+                        <button id="play-btn" class="icon-btn play-btn" title="Play live stream">▶</button>
+                    </div>
+                    <div class="date-picker">
+                        <button id="prev-day" class="icon-btn" title="Previous Day">←</button>
+                        <span id="current-date-display">Today</span>
+                        <button id="today-btn" class="today-btn">Today</button>
+                        <button id="next-day" class="icon-btn" title="Next Day">→</button>
+                    </div>
+                </div>
+                <div class="search-container">
+                    <div class="search-bar">
+                        <input type="text" id="search-input" placeholder="Search programmes...">
+                        <button id="search-clear" class="hidden" title="Clear search">×</button>
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <div class="view-toggle">
+                        <button id="view-table-btn" class="view-btn active" title="Table View">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M3 6h18" />
+                                <path d="M3 12h18" />
+                                <path d="M3 18h18" />
+                            </svg>
+                        </button>
+                        <button id="view-grid-btn" class="view-btn" title="Grid View">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" />
+                                <rect x="14" y="3" width="7" height="7" />
+                                <rect x="14" y="14" width="7" height="7" />
+                                <rect x="3" y="14" width="7" height="7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="cache-progress" class="cache-progress" style="display: none;"></div>
+            </header>
+
+            <section class="schedule-section">
+                <div id="loading-state" class="hidden">
+                    <div class="loader"></div>
+                    <p id="loading-text">Fetching schedule...</p>
+                </div>
+                <div id="error-state" class="hidden">
+                    <p id="error-message"></p>
+                    <button id="retry-btn">Retry</button>
+                </div>
+                <div id="schedule-container" class="schedule-grid">
+                    <!-- Schedule items will be populated by JS -->
+                </div>
+                <div id="no-results" class="hidden">
+                    <p>No programmes found matching your search.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Programme Details Modal -->
+    <div id="prog-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close">×</button>
+            <div class="modal-header">
+                <div id="modal-station-tag" class="station-tag"></div>
+                <div id="modal-date"></div>
+            </div>
+            <h2 id="modal-title"></h2>
+            <div class="modal-time"></div>
+            <div class="modal-synopsis"></div>
+            <div class="modal-actions">
+                <button id="modal-goto-btn" class="today-btn">Go to this programme</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/constants.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
