@@ -12,7 +12,13 @@ A web application for browsing BBC Radio schedules. Runs entirely in the browser
     - or any other server you choose...
 4.  Open `http://localhost:8000` in your browser.
 
-[!IMPORTANT] Since caching schedules requires multiple api queries any free public CORS proxy may rate limit or block requests. For production use, consider a paid CORS proxy service or hosting your own proxy (e.g., using a simple Node.js or Python server).
+**IMPORTANT**
+
+> Since caching schedules requires multiple api queries
+> any free public CORS proxy may rate limit or block requests.
+> For production use, consider a paid CORS proxy service or
+> hosting your own proxy (e.g., using a simple Node.js or Python server).
+
 
 ## Features
 
