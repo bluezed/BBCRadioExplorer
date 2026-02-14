@@ -5,7 +5,7 @@ A web application for browsing BBC Radio schedules. Runs entirely in the browser
 ## How to Run
 
 1.  Navigate to the `public` folder.
-2.  In [constants.js](shared/constants.js) edit the constant PROXY_BASE_URL and set a CORS Proxy url.
+2.  In [constants.js](public/shared/constants.js) edit the constant PROXY_BASE_URL and set a CORS Proxy url.
 3.  Start a local server (required for Web Workers):
     - **Python**: `python -m http.server 8000`
     - **Node.js**: `npx serve`
