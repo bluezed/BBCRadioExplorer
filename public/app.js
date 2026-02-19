@@ -49,7 +49,7 @@ let state = {
     currentDate: new Date(),
     programmes: [],
     searchQuery: '',
-    isTableView: true,
+    isTableView: false, // Default to grid view
     cache: loadCacheFromStorage(), // Load cache from localStorage
     lastRequestId: 0, // Track pending requests to avoid race conditions
     searchRequestId: 0, // Track current search request for worker responses
@@ -64,6 +64,7 @@ let state = {
 let searchWorker = null;
 let searchWorkerReady = false;
 let playBtn = null;
+let mobilePlayBtn = null;
 let radioBrowserBaseUrl = null; // Cached radio-browser API URL
 
 // Initialize Web Worker
@@ -142,6 +143,14 @@ async function getRadioBrowserBaseUrl() {
 async function checkStreamAvailability() {
     const stationName = state.currentStation.name;
 
+    // Show mobile play button during loading
+    if (mobilePlayBtn) {
+        mobilePlayBtn.classList.remove('hidden');
+        mobilePlayBtn.classList.add('disabled');
+        const span = mobilePlayBtn.querySelector('span:last-child');
+        if (span) span.textContent = 'Checking...';
+    }
+
     try {
         const apiUrl = await getRadioBrowserBaseUrl();
         const response = await fetch(`${apiUrl}${RADIO_BROWSER_STATIONS_ENDPOINT}${encodeURIComponent(stationName)}`, {
@@ -158,12 +167,20 @@ async function checkStreamAvailability() {
         // Check if any stream is available
         const hasStream = bbcStations.length > 0 && bbcStations.some(s => s.url_resolved);
         state.currentStreamAvailable = hasStream;
+
+        // Remove loading state and update UI
+        if (playBtn) {
+            playBtn.classList.remove('loading');
+        }
         updatePlayButtonUI();
 
         return hasStream;
     } catch (error) {
         console.error('Failed to check stream availability:', error);
         state.currentStreamAvailable = false;
+        if (playBtn) {
+            playBtn.classList.remove('loading');
+        }
         updatePlayButtonUI();
         return false;
     }
@@ -271,17 +288,56 @@ async function playStream() {
 }
 
 function updatePlayButtonUI() {
+    if (playBtn && playBtn.classList.contains('loading')) {
+        // Still loading - don't update yet
+        return;
+    }
+
+    // Update desktop play button
     if (playBtn) {
+        const playIcon = playBtn.querySelector('.play-icon');
+        const playLabel = playBtn.querySelector('.play-label');
+
         if (!state.currentStreamAvailable) {
-            playBtn.innerHTML = '▶';
+            if (playIcon) playIcon.textContent = '▶';
+            if (playLabel) playLabel.textContent = 'Unavailable';
             playBtn.classList.remove('playing');
             playBtn.classList.add('disabled');
             playBtn.title = 'Stream not available';
-        } else {
-            playBtn.innerHTML = state.isPlaying ? '⏸' : '▶';
-            playBtn.classList.toggle('playing', state.isPlaying);
+        } else if (state.isPlaying) {
+            if (playIcon) playIcon.textContent = '⏸';
+            if (playLabel) playLabel.textContent = 'Stop';
+            playBtn.classList.add('playing');
             playBtn.classList.remove('disabled');
-            playBtn.title = state.isPlaying ? 'Pause' : 'Play live stream';
+            playBtn.title = 'Stop streaming';
+        } else {
+            if (playIcon) playIcon.textContent = '▶';
+            if (playLabel) playLabel.textContent = 'Listen Live';
+            playBtn.classList.remove('playing');
+            playBtn.classList.remove('disabled');
+            playBtn.title = 'Play live stream';
+        }
+    }
+
+    // Update mobile play button
+    if (mobilePlayBtn) {
+        const span = mobilePlayBtn.querySelector('span:last-child');
+
+        if (!state.currentStreamAvailable) {
+            mobilePlayBtn.classList.add('disabled');
+            mobilePlayBtn.classList.remove('playing');
+            mobilePlayBtn.title = 'Stream not available';
+            if (span) span.textContent = 'Unavailable';
+        } else if (state.isPlaying) {
+            mobilePlayBtn.classList.add('playing');
+            mobilePlayBtn.classList.remove('disabled');
+            mobilePlayBtn.title = 'Stop streaming';
+            if (span) span.textContent = 'Stop';
+        } else {
+            mobilePlayBtn.classList.remove('playing');
+            mobilePlayBtn.classList.remove('disabled');
+            mobilePlayBtn.title = 'Play live stream';
+            if (span) span.textContent = 'Listen Live';
         }
     }
 }
@@ -468,24 +524,30 @@ function init() {
 
     // Play/pause live stream
     playBtn = document.getElementById('play-btn');
+    mobilePlayBtn = document.getElementById('mobile-play-btn');
+
+    const handlePlayClick = (e) => {
+        e.stopPropagation();
+        if (!state.currentStreamAvailable) {
+            alert('Stream not available for this station');
+            return;
+        }
+        // Toggle play/stop based on current state
+        if (state.isPlaying) {
+            // Stop playback completely (cleans up HLS player and network)
+            stopPlayback();
+        } else {
+            // Play
+            playStream();
+        }
+    };
+
     if (playBtn) {
-        playBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (!state.currentStreamAvailable) {
-                alert('Stream not available for this station');
-                return;
-            }
-            // Toggle play/pause based on current state
-            if (state.isPlaying) {
-                // Stop playback completely (cleans up HLS player and network)
-                stopPlayback();
-            } else {
-                // Play
-                playStream();
-            }
-        });
-    } else {
-        console.warn('Play button not found');
+        playBtn.addEventListener('click', handlePlayClick);
+    }
+
+    if (mobilePlayBtn) {
+        mobilePlayBtn.addEventListener('click', handlePlayClick);
     }
 
     // Floating search: focus header search input
@@ -678,11 +740,11 @@ function renderStations() {
         stationListEl.appendChild(li);
     });
 
-    // Scroll to active station
-    const activeStation = stationListEl.querySelector('.station-item.active');
-    if (activeStation) {
-        activeStation.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
+    // Scroll to active station (desktop only - on mobile it can push stations off screen)
+    // const activeStation = stationListEl.querySelector('.station-item.active');
+    // if (activeStation) {
+    //     activeStation.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    // }
 }
 
 function updateDateDisplay() {
@@ -1009,8 +1071,14 @@ function renderSchedule(isGlobal = false) {
 
             if (isToday && start && end && now >= start && now < end) {
                 card.classList.add('now-playing');
+                // Scroll schedule container so card is visible above fixed play button
                 setTimeout(() => {
-                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const container = scheduleContainerEl.parentElement;
+                    const rect = card.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    // Target position: card should be near top of visible area
+                    const targetTop = rect.top - containerRect.top - 60;
+                    container.scrollTo({ top: targetTop, behavior: 'smooth' });
                 }, 100);
             }
         }
@@ -1072,8 +1140,14 @@ function renderTableView(programmes, isGlobal) {
 
         if (!isGlobal && !state.searchQuery && isToday && start && end && now >= start && now < end) {
             tr.classList.add('now-playing');
+            // Scroll schedule container so row is visible above fixed play button
             setTimeout(() => {
-                tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const container = tableWrapper;
+                const rect = tr.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                // Target position: row should be near top of visible area
+                const targetTop = container.scrollTop + rect.top - containerRect.top - 60;
+                container.scrollTo({ top: targetTop, behavior: 'smooth' });
             }, 100);
         }
 
@@ -1153,10 +1227,29 @@ function updateNowPlaying() {
         const el = document.querySelector(`.programme-card[data-start="${currentProg.start}"], .schedule-table tbody tr[data-start="${currentProg.start}"]`);
         if (el) {
             el.classList.add('now-playing');
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
 }
+
+// Reset scroll positions when page becomes visible (fixes bfcache scroll issues)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        // Reset main content scroll to top
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            const scheduleSection = mainContent.querySelector('.schedule-section');
+            if (scheduleSection) {
+                scheduleSection.scrollTop = 0;
+            }
+        }
+        // Reset station nav scroll
+        const stationNav = document.querySelector('.station-nav');
+        if (stationNav) {
+            stationNav.scrollLeft = 0;
+        }
+    }
+});
 
 // Start polling for now-playing updates (every 30 seconds)
 setInterval(updateNowPlaying, 30000);

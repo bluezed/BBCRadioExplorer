@@ -33,69 +33,115 @@
         overflow: hidden;
     }
 
-    /* Sidebar - stacked layout */
+    /* Sidebar - compact row layout */
     .sidebar {
         width: 100%;
         height: auto;
-        min-height: unset;
         border-right: none;
         border-bottom: 1px solid var(--glass-border);
-        padding: 0.75rem;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
+        padding: 0.35rem 0.75rem;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
         flex-shrink: 0;
+        overflow: hidden;
     }
 
+    /* Hide logo on mobile to save space */
     .logo {
-        margin-bottom: 0;
-        padding: 0;
-        font-size: 1.1rem;
-        text-align: center;
-        white-space: nowrap;
+        display: none;
     }
 
-    .logo .bbc {
-        padding: 0.1rem 0.3rem;
-    }
-
-    /* Move station nav under logo */
+    /* Station nav - just horizontal scroll */
     .station-nav {
-        overflow-x: auto;
         display: flex;
-        padding-right: 0;
-        -webkit-overflow-scrolling: touch;
+        flex-direction: row;
+        align-items: center;
         width: 100%;
+        gap: 0.3rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        flex-shrink: 0;
     }
 
     .station-nav h3 {
         display: none;
     }
 
+    /* Station list - horizontal scroll row */
     #station-list {
         display: flex;
         flex-direction: row;
-        gap: 0.4rem;
+        gap: 0.3rem;
         padding: 0;
         margin: 0;
-        width: 100%;
-        justify-content: flex-start;
+        flex-shrink: 0;
+    }
+
+    .side-station-logo {
+        width: 16px;
+        height: 16px;
     }
 
     .station-item {
-        padding: 0.4rem 0.75rem;
+        padding: 0.4rem 0.6rem;
         border-left: none;
         border-bottom: none;
         border-top: 3px solid transparent;
         white-space: nowrap;
         background: var(--card-bg);
         border-radius: 6px;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
 
     .station-item.active {
         background: rgba(255, 0, 80, 0.1);
         border-top-color: var(--accent-color);
+    }
+
+    /* Mobile Play Button - fixed at bottom of screen */
+    #mobile-play-btn {
+        display: flex;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: calc(100% - 2rem);
+        max-width: 400px;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, var(--accent-color), #cc0040);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(255, 0, 80, 0.4);
+        z-index: 100;
+    }
+
+    #mobile-play-btn:active {
+        transform: scale(0.98);
+    }
+
+    #mobile-play-btn.playing {
+        background: linear-gradient(135deg, #00cc66, #00994d);
+        box-shadow: 0 4px 15px rgba(0, 204, 102, 0.3);
+    }
+
+    #mobile-play-btn.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background: #444;
+        box-shadow: none;
+    }
+
+    #mobile-play-btn .play-icon {
+        font-size: 0.9rem;
     }
 
     /* Smaller date picker */
@@ -126,7 +172,7 @@
 
     /* Adjust Main Content */
     .content-header {
-        padding: 0.4rem 0.75rem;
+        padding: 0.25rem 0.75rem;
         position: relative;
         z-index: 10;
     }
@@ -157,10 +203,9 @@
         border-radius: 4px;
     }
 
-    .play-btn {
-        font-size: 1rem;
-        width: 28px;
-        height: 28px;
+    /* Hide desktop play button on mobile */
+    .header-title-group .play-btn {
+        display: none;
     }
 
     /* Compact day picker - right aligned */

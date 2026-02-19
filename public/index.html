@@ -33,6 +33,10 @@
                 <ul id="station-list">
                     <!-- Stations will be populated by JS -->
                 </ul>
+                <button id="mobile-play-btn" class="mobile-play-btn disabled" title="Checking stream...">
+                    <span class="play-icon">▶</span>
+                    <span>Checking...</span>
+                </button>
             </nav>
         </aside>
 
@@ -43,7 +47,10 @@
                     <div class="header-title-group">
                         <div id="station-logo-header" class="header-logo"></div>
                         <h1 id="current-station-name">BBC Radio 1</h1>
-                        <button id="play-btn" class="icon-btn play-btn" title="Play live stream">▶</button>
+                        <button id="play-btn" class="play-btn disabled" title="Checking stream...">
+                            <span class="play-icon">▶</span>
+                            <span class="play-label">Checking...</span>
+                        </button>
                     </div>
                     <div class="date-picker">
                         <button id="prev-day" class="icon-btn" title="Previous Day">←</button>
