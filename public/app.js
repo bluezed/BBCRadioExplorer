@@ -6,6 +6,43 @@
 
 // All constants are defined in shared/constants.js
 
+const CACHE_STORAGE_KEY = 'bbc-radio-cache';
+
+// Load cache from localStorage
+function loadCacheFromStorage() {
+    try {
+        const stored = localStorage.getItem(CACHE_STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            const now = Date.now();
+            const validCache = new Map();
+
+            for (const [url, entry] of Object.entries(parsed)) {
+                if (now - entry.timestamp < CACHE_DURATION) {
+                    validCache.set(url, entry);
+                }
+            }
+            return validCache;
+        }
+    } catch (e) {
+        console.warn('Failed to load cache from storage:', e);
+    }
+    return new Map();
+}
+
+// Save cache to localStorage
+function saveCacheToStorage(cache) {
+    try {
+        const obj = {};
+        for (const [url, entry] of cache) {
+            obj[url] = entry;
+        }
+        localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(obj));
+    } catch (e) {
+        console.warn('Failed to save cache to storage:', e);
+    }
+}
+
 // Application State
 let state = {
     currentStation: STATIONS[0],
@@ -13,7 +50,7 @@ let state = {
     programmes: [],
     searchQuery: '',
     isTableView: true,
-    cache: new Map(), // URL -> { data, timestamp }
+    cache: loadCacheFromStorage(), // Load cache from localStorage
     lastRequestId: 0, // Track pending requests to avoid race conditions
     searchRequestId: 0, // Track current search request for worker responses
     isPlaying: false,
@@ -702,6 +739,7 @@ async function fetchWithCache(bbcUrl) {
 
     // Update Cache
     state.cache.set(bbcUrl, { data, timestamp: now });
+    saveCacheToStorage(state.cache);
     return data;
 }
 

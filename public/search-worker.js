@@ -8,6 +8,7 @@
 importScripts('shared/constants.js');
 
 const CONCURRENT_LIMIT = 6; // Browser connection limit
+const CACHE_NAME = 'bbc-radio-schedules';
 
 // Cache: stationId:dateStr -> { data, timestamp }
 const cache = new Map();
@@ -32,9 +33,10 @@ function getFormattedDate(date) {
 async function fetchWithCache(stationId, dateStr) {
     const cacheKey = `${stationId}:${dateStr}`;
     const url = `https://rms.api.bbc.co.uk/v2/experience/inline/schedules/${stationId}/${dateStr}`;
+    const proxyUrl = PROXY_BASE_URL + encodeURIComponent(url);
     const now = Date.now();
 
-    // Check cache
+    // Check memory cache first
     if (cache.has(cacheKey)) {
         const cached = cache.get(cacheKey);
         if (now - cached.timestamp < CACHE_DURATION) {
@@ -42,14 +44,39 @@ async function fetchWithCache(stationId, dateStr) {
         }
     }
 
+    // Try Cache API
+    try {
+        const cachedResponse = await caches.match(proxyUrl);
+        if (cachedResponse) {
+            const cachedData = await cachedResponse.json();
+            if (now - cachedData.timestamp < CACHE_DURATION) {
+                cache.set(cacheKey, cachedData);
+                return cachedData.data;
+            }
+        }
+    } catch (e) {
+        console.warn('Cache API lookup failed:', e);
+    }
+
     // Fetch via proxy
     try {
-        const response = await fetch(PROXY_BASE_URL + encodeURIComponent(url));
+        const response = await fetch(proxyUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
 
-        // Store in cache
-        cache.set(cacheKey, { data, timestamp: now });
+        // Store in both memory cache and Cache API
+        const cacheEntry = { data, timestamp: now };
+        cache.set(cacheKey, cacheEntry);
+
+        // Save to Cache API (fire and forget)
+        try {
+            const response = new Response(JSON.stringify(cacheEntry), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            caches.open(CACHE_NAME).then(c => c.put(proxyUrl, response)).catch(() => {});
+        } catch (e) {
+            // Ignore cache write errors
+        }
 
         return data;
     } catch (error) {
@@ -188,7 +215,7 @@ function searchCache(query) {
         }
 
         // Build results from keys
-        const now = new Date();
+        const now = Date.now();
         const results = [];
         const seen = new Set();
 
