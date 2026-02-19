@@ -6,43 +6,6 @@
 
 // All constants are defined in shared/constants.js
 
-const CACHE_STORAGE_KEY = 'bbc-radio-cache';
-
-// Load cache from localStorage
-function loadCacheFromStorage() {
-    try {
-        const stored = localStorage.getItem(CACHE_STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            const now = Date.now();
-            const validCache = new Map();
-
-            for (const [url, entry] of Object.entries(parsed)) {
-                if (now - entry.timestamp < CACHE_DURATION) {
-                    validCache.set(url, entry);
-                }
-            }
-            return validCache;
-        }
-    } catch (e) {
-        console.warn('Failed to load cache from storage:', e);
-    }
-    return new Map();
-}
-
-// Save cache to localStorage
-function saveCacheToStorage(cache) {
-    try {
-        const obj = {};
-        for (const [url, entry] of cache) {
-            obj[url] = entry;
-        }
-        localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(obj));
-    } catch (e) {
-        console.warn('Failed to save cache to storage:', e);
-    }
-}
-
 // Application State
 let state = {
     currentStation: STATIONS[0],
@@ -50,7 +13,6 @@ let state = {
     programmes: [],
     searchQuery: '',
     isTableView: false, // Default to grid view
-    cache: loadCacheFromStorage(), // Load cache from localStorage
     lastRequestId: 0, // Track pending requests to avoid race conditions
     searchRequestId: 0, // Track current search request for worker responses
     isPlaying: false,
@@ -63,6 +25,7 @@ let state = {
 // Web Worker for background search caching
 let searchWorker = null;
 let searchWorkerReady = false;
+let workerCacheReady = false;
 let playBtn = null;
 let mobilePlayBtn = null;
 let radioBrowserBaseUrl = null; // Cached radio-browser API URL
@@ -75,6 +38,18 @@ function initSearchWorker() {
         searchWorker.onerror = (e) => {
             console.error('Search worker error:', e);
         };
+
+        // Load cached schedules from localStorage and send to worker
+        const cached = loadCachedSchedules();
+
+        if (cached && Object.keys(cached).length > 0) {
+            // Has cached data - send to worker, will call fetchSchedule on cacheReady
+            searchWorker.postMessage({ type: 'initCache', initCache: cached });
+        } else {
+            // No cached data - send empty init to trigger cacheReady immediately
+            searchWorker.postMessage({ type: 'initCache', initCache: null });
+        }
+
         // Start prefetching all schedules in background
         searchWorker.postMessage({ type: 'prefetch' });
         searchWorkerReady = true;
@@ -83,9 +58,59 @@ function initSearchWorker() {
     }
 }
 
+// Load cached schedules from localStorage
+function loadCachedSchedules() {
+    try {
+        const stored = localStorage.getItem('bbc-radio-schedules');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        // Ignore cache load errors
+    }
+    return null;
+}
+
+// Save schedule to localStorage
+function saveScheduleToCache(stationId, dateStr, data, timestamp) {
+    try {
+        const key = `${stationId}:${dateStr}`;
+        const cached = loadCachedSchedules() || {};
+        cached[key] = { data, timestamp };
+        localStorage.setItem('bbc-radio-schedules', JSON.stringify(cached));
+    } catch (e) {
+        // Ignore cache save errors
+    }
+}
+
 // Handle messages from search worker
 function handleWorkerMessage(e) {
-    const { type, results, percent } = e.data;
+    const { type, results, percent, stationId, dateStr, data, timestamp } = e.data;
+
+    if (type === 'scheduleCached') {
+        // Persist to localStorage
+        saveScheduleToCache(stationId, dateStr, data, timestamp);
+        return;
+    }
+
+    if (type === 'cacheReady') {
+        workerCacheReady = true;
+        // Now safe to fetch schedule (cache is loaded)
+        // Check if current schedule is already cached
+        const dateStr = getFormattedDate(state.currentDate);
+        const cached = loadCachedSchedules();
+        const hasCurrentDate = cached && cached[`${state.currentStation.id}:${dateStr}`];
+
+        if (hasCurrentDate) {
+            // Current date is cached - fetch via worker for consistency
+            fetchSchedule();
+        } else {
+            // Current date NOT in cache - fetch directly to populate it immediately
+            fetchCurrentScheduleDirect();
+        }
+        checkStreamAvailability();
+        return;
+    }
 
     if (type === 'progress') {
         // Update cache progress indicator
@@ -473,7 +498,7 @@ function init() {
 
     renderStations();
     updateDateDisplay();
-    fetchSchedule();
+    // fetchSchedule() will be called when worker cache is ready
     checkStreamAvailability(); // Check if stream is available for initial station
 
     // Event Listeners
@@ -781,30 +806,6 @@ function formatDateDisplay(date) {
 }
 
 // Helpers for Data Fetching
-async function fetchWithCache(bbcUrl) {
-    const now = Date.now();
-
-    // Check Cache
-    if (state.cache.has(bbcUrl)) {
-        const cached = state.cache.get(bbcUrl);
-        if (now - cached.timestamp < CACHE_DURATION) {
-            return cached.data;
-        }
-    }
-
-    // Fetch via Proxy
-    const proxyUrl = PROXY_BASE_URL + encodeURIComponent(bbcUrl);
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const data = await response.json();
-
-    // Update Cache
-    state.cache.set(bbcUrl, { data, timestamp: now });
-    saveCacheToStorage(state.cache);
-    return data;
-}
-
 // Global Search Implementation - fetches schedules across multiple days and filters locally
 async function fetchGlobalSearch() {
     if (!state.searchQuery) return;
@@ -843,7 +844,10 @@ async function fetchGlobalSearch() {
                 const promise = (async () => {
                     try {
                         const bbcUrl = `https://rms.api.bbc.co.uk/v2/experience/inline/schedules/${station.id}/${dateStr}`;
-                        const data = await fetchWithCache(bbcUrl);
+                        const proxyUrl = PROXY_BASE_URL + encodeURIComponent(bbcUrl);
+                        const response = await fetch(proxyUrl);
+                        if (!response.ok) return;
+                        const data = await response.json();
 
                         if (data && data.data && data.data[0] && data.data[0].data) {
                             const programmes = data.data[0].data;
@@ -917,6 +921,54 @@ async function fetchGlobalSearch() {
     }
 }
 
+// Fetch current schedule directly (bypasses worker for immediate load)
+async function fetchCurrentScheduleDirect() {
+    const requestId = ++state.lastRequestId;
+    const stationId = state.currentStation.id;
+    const dateStr = getFormattedDate(state.currentDate);
+
+    stationLogoHeaderEl.innerHTML = `<img src="${getLogoUrl(stationId)}" alt="${state.currentStation.name}">`;
+
+    showState('loading');
+
+    try {
+        const bbcUrl = `https://rms.api.bbc.co.uk/v2/experience/inline/schedules/${stationId}/${dateStr}`;
+        const proxyUrl = PROXY_BASE_URL + encodeURIComponent(bbcUrl);
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+
+        // Skip if a newer request has started
+        if (requestId !== state.lastRequestId) return;
+
+        if (data.data && data.data[0] && data.data[0].data) {
+            state.programmes = data.data[0].data;
+        } else {
+            state.programmes = [];
+        }
+
+        // Notify worker to cache this schedule
+        if (searchWorker && searchWorkerReady) {
+            searchWorker.postMessage({
+                type: 'cacheSchedule',
+                stationId,
+                dateStr,
+                data,
+                timestamp: Date.now()
+            });
+        }
+
+        renderSchedule();
+        showState('content');
+    } catch (error) {
+        console.error('Fetch error:', error);
+        if (requestId === state.lastRequestId) {
+            errorMessageEl.textContent = `Failed to load schedule: ${error.message}`;
+            showState('error');
+        }
+    }
+}
+
 async function fetchSchedule() {
     const requestId = ++state.lastRequestId;
     const stationId = state.currentStation.id;
@@ -955,7 +1007,10 @@ async function fetchSchedule() {
     // Fallback: direct API call if worker not available
     try {
         const bbcUrl = `https://rms.api.bbc.co.uk/v2/experience/inline/schedules/${stationId}/${dateStr}`;
-        const data = await fetchWithCache(bbcUrl);
+        const proxyUrl = PROXY_BASE_URL + encodeURIComponent(bbcUrl);
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
 
         // Skip if a newer request has started
         if (requestId !== state.lastRequestId) return;

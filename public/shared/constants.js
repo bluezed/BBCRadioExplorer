@@ -6,7 +6,7 @@
 
 // Application Configuration
 const APP_NAME = 'bbcRadioExplorer';
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 // API Configuration
 const PROXY_BASE_URL = 'http://your.cors-proxy.here:12345/proxy?url=';

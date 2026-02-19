@@ -44,18 +44,20 @@ async function fetchWithCache(stationId, dateStr) {
         }
     }
 
-    // Try Cache API
+    // Try Cache API (may not be available in all worker contexts)
     try {
-        const cachedResponse = await caches.match(proxyUrl);
-        if (cachedResponse) {
-            const cachedData = await cachedResponse.json();
-            if (now - cachedData.timestamp < CACHE_DURATION) {
+        if (typeof caches !== 'undefined') {
+            const cachedResponse = await caches.match(proxyUrl);
+            if (cachedResponse) {
+                const cachedData = await cachedResponse.json();
+                // Cache API stores {data, timestamp} - just return the data
+                // Timestamp validation is handled by the memory cache for fresh entries
                 cache.set(cacheKey, cachedData);
                 return cachedData.data;
             }
         }
     } catch (e) {
-        console.warn('Cache API lookup failed:', e);
+        // Cache API not available, continue with memory cache or network fetch
     }
 
     // Fetch via proxy
@@ -68,14 +70,25 @@ async function fetchWithCache(stationId, dateStr) {
         const cacheEntry = { data, timestamp: now };
         cache.set(cacheKey, cacheEntry);
 
-        // Save to Cache API (fire and forget)
-        try {
-            const response = new Response(JSON.stringify(cacheEntry), {
-                headers: { 'Content-Type': 'application/json' }
-            });
-            caches.open(CACHE_NAME).then(c => c.put(proxyUrl, response)).catch(() => {});
-        } catch (e) {
-            // Ignore cache write errors
+        // Notify main thread to persist to localStorage
+        self.postMessage({
+            type: 'scheduleCached',
+            stationId,
+            dateStr,
+            data,
+            timestamp: now
+        });
+
+        // Save to Cache API if available (fire and forget)
+        if (typeof caches !== 'undefined') {
+            try {
+                const response = new Response(JSON.stringify(cacheEntry), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                caches.open(CACHE_NAME).then(c => c.put(proxyUrl, response)).catch(() => {});
+            } catch (e) {
+                // Ignore cache write errors
+            }
         }
 
         return data;
@@ -316,9 +329,28 @@ function formatDateDisplay(date) {
 
 // Handle messages from main thread
 self.onmessage = async (e) => {
-    const { type, query, stationId, dateStr } = e.data;
+    const { type, query, stationId, dateStr, initCache, data, timestamp } = e.data;
 
-    if (type === 'prefetch') {
+    if (type === 'initCache') {
+        // Load cache from localStorage (passed from main thread)
+        if (initCache) {
+            for (const [key, entry] of Object.entries(initCache)) {
+                // Only accept non-expired entries (10 hours)
+                if (Date.now() - entry.timestamp < CACHE_DURATION) {
+                    cache.set(key, entry);
+                }
+            }
+        }
+        // Worker is ready to serve requests
+        self.postMessage({ type: 'cacheReady' });
+    } else if (type === 'cacheSchedule') {
+        // Cache schedule fetched directly by main thread
+        const cacheKey = `${stationId}:${dateStr}`;
+        const cacheEntry = { data, timestamp };
+        cache.set(cacheKey, cacheEntry);
+        // Build search index for this schedule
+        buildSearchIndex(stationId, dateStr, data);
+    } else if (type === 'prefetch') {
         await prefetchAll();
     } else if (type === 'search') {
         const results = searchCache(query);
