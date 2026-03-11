@@ -183,11 +183,25 @@ async function checkStreamAvailability() {
         });
         const stations = await response.json();
 
-        // Find BBC station from UK
-        const bbcStations = stations.filter(s =>
-            s.name.toLowerCase().includes(stationName.toLowerCase()) &&
-            s.countrycode === 'GB'
-        );
+        // Prefer exact station name matches (case-insensitive) within UK results,
+        // fall back to substring matches when exact matches are not found.
+        const lowerName = stationName.toLowerCase();
+        // Limit to UK stations first
+        let bbcStations = (stations || []).filter(s => s.countrycode === 'GB');
+
+        // Try exact name match first
+        const exactMatches = bbcStations.filter(s => s.name && s.name.toLowerCase() === lowerName);
+        if (exactMatches.length > 0) {
+            bbcStations = exactMatches;
+        } else {
+            // Next prefer starts-with matches, then fall back to substring matches
+            const startsWithMatches = bbcStations.filter(s => s.name && s.name.toLowerCase().startsWith(lowerName));
+            if (startsWithMatches.length > 0) {
+                bbcStations = startsWithMatches;
+            } else {
+                bbcStations = bbcStations.filter(s => s.name && s.name.toLowerCase().includes(lowerName));
+            }
+        }
 
         // Check if any stream is available
         const hasStream = bbcStations.length > 0 && bbcStations.some(s => s.url_resolved);
@@ -246,11 +260,25 @@ async function playStream() {
         });
         const stations = await response.json();
 
-        // Find BBC station from UK - prefer MP3/AAC over HLS
-        const bbcStations = stations.filter(s =>
-            s.name.toLowerCase().includes(stationName.toLowerCase()) &&
-            s.countrycode === 'GB'
-        );
+        // Prefer exact station name matches (case-insensitive) within UK results,
+        // fall back to substring matches when exact matches are not found.
+        const lowerName = stationName.toLowerCase();
+        // Limit to UK stations first
+        let bbcStations = (stations || []).filter(s => s.countrycode === 'GB');
+
+        // Try exact name match first
+        const exactMatches = bbcStations.filter(s => s.name && s.name.toLowerCase() === lowerName);
+        if (exactMatches.length > 0) {
+            bbcStations = exactMatches;
+        } else {
+            // Next prefer starts-with matches, then fall back to substring matches
+            const startsWithMatches = bbcStations.filter(s => s.name && s.name.toLowerCase().startsWith(lowerName));
+            if (startsWithMatches.length > 0) {
+                bbcStations = startsWithMatches;
+            } else {
+                bbcStations = bbcStations.filter(s => s.name && s.name.toLowerCase().includes(lowerName));
+            }
+        }
 
         // Prefer direct MP3/AAC streams over HLS
         let bbcStation = bbcStations.find(s =>
